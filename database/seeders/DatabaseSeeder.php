@@ -19,24 +19,26 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-    //     User::factory()->create([
-    //         'name' => 'Super Admin',
-    //         'email' => 'superAdmin@example.com',
-    //         'password' => 'admin1234',
-    //         'role' => 'superadmin',
+       /*  User::create([
+            'name' => 'Super Admin',
+            'email' => 'admin@1234.com',
+            'password' => Hash::make('1234'),
+            'role' => 'superadmin',
+        ]);
 
-    //     ]);
-    //      $this->call([
-    //     AdminClientSeeder::class,  // ]);
+        User::create([
+            'name' => 'Admin Client',
+            'email' => 'adminclient@example.com',
+            'password' => Hash::make('admin1234'),
+            'role' => 'adminclient',
+        ]);
 
-    DB::table('users')->insert([
-            'name' => 'supervisor',
+        User::create([
+            'name' => 'Supervisor',
             'email' => 'supervisor@example.com',
             'password' => Hash::make('12345678'),
             'role' => 'supervisor',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ]); */
   
 }
     }

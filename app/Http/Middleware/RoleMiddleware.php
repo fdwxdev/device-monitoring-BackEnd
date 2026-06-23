@@ -9,12 +9,17 @@ class RoleMiddleware
 {
     public function handle(Request $request, Closure $next, ...$roles)
     {
-        if (!auth()->check()) {
-            return redirect('/login');
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        if (!in_array(auth()->user()->role, $roles)) {
-            abort(403, 'Unauthorized');
+        $userRole = strtolower($user->role);
+        $normalizedRoles = array_map('strtolower', $roles);
+
+        if (!in_array($userRole, $normalizedRoles)) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
         return $next($request);

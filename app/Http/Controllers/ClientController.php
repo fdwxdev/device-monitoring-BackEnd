@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -33,14 +33,11 @@ class ClientController extends Controller
         ]);
 
         $id = DB::table('clients')->insertGetId([
-
             'name' => $request->name,
             'address' => $request->address,
             'email' => $request->email,
-            'phone' => $request->phone,
-            'created_at' => now(),
-            'updated_at' => now()
-
+            'tele' => $request->phone ?? $request->tele,
+            'id_user' => $request->id_user
         ]);
 
         return response()->json([
@@ -95,13 +92,11 @@ class ClientController extends Controller
         DB::table('clients')
             ->where('id', $id)
             ->update([
-
                 'name' => $request->name,
                 'address' => $request->address,
                 'email' => $request->email,
-                'phone' => $request->phone,
-                'updated_at' => now()
-
+                'tele' => $request->phone ?? $request->tele,
+                'id_user' => $request->id_user
             ]);
 
         return response()->json([
@@ -138,4 +133,3 @@ class ClientController extends Controller
     }
 
 }
-

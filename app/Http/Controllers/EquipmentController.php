@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -13,9 +13,9 @@ class EquipmentController extends Controller
      * GET /api/sites
      * هاد الـ function كترجع ليك الـ equipments ديال الكليان اللي مكونيكطي
      */
-    public function index()
+    public function index(Request $request)
     {
-        $clientId = auth()->user::client_id;
+        $clientId = $request->user()->client_id;
 
         $equipments = DB::table('equipments')
             ->join('devices', 'equipments.id_device', '=', 'devices.id')

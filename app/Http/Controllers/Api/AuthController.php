@@ -17,6 +17,7 @@ class AuthController extends Controller
             'password' => 'required'
         ]);
 
+        // Query directly with DB::table
         $user = DB::table('users')->where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
@@ -25,39 +26,35 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // simple token (without Sanctum)
-        $token = bin2hex(random_bytes(32));
-
-        DB::table('users')
-            ->where('id', $user->id)
-            ->update([
-                'remember_token' => $token
-            ]);
+        // Retrieve or generate a stable remember_token as the API token
+        $token = $user->remember_token;
+        if (!$token) {
+            $token = bin2hex(random_bytes(32));
+            DB::table('users')->where('id', $user->id)->update(['remember_token' => $token]);
+            $user->remember_token = $token;
+        }
 
         return response()->json([
             'message' => 'Login success',
             'user' => $user,
-            'token' => $token
+            'access_token' => $token,
+            'role' => $user->role
         ]);
     }
 
     // LOGOUT
     public function logout(Request $request)
     {
-        $token = $request->header('Authorization');
-
-        if (!$token) {
-            return response()->json(['message' => 'No token provided'], 401);
-        }
-
-        DB::table('users')
-            ->where('remember_token', $token)
-            ->update([
-                'remember_token' => null
-            ]);
-
         return response()->json([
             'message' => 'Logout successful'
+        ]);
+    }
+
+    // PROFILE
+    public function profile(Request $request)
+    {
+        return response()->json([
+            'user' => $request->user()
         ]);
     }
 }

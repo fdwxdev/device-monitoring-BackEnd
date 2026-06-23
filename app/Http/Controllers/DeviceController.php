@@ -8,18 +8,23 @@ use Illuminate\Support\Facades\Validator;
 
 class DeviceController extends Controller
 {
-    /**
-     * 1. عرض قائمة الأجهزة الخاصة بالكليان اللي مكونيكطي
-     */
-    public function index()
+    
+    public function index(Request $request)
     {
-        $clientId = auth()->user::client_id;
+        $user = $request->user();
 
-        $devices = DB::table('devices')
-            ->join('sites', 'devices.id_site', '=', 'sites.id')
-            ->where('sites.id_client', $clientId)
-            ->select('devices.*', 'sites.name as site_name')
-            ->get();
+        if (strtolower($user->role) === 'superadmin') {
+            $devices = DB::table('devices')
+                ->join('sites', 'devices.id_site', '=', 'sites.id')
+                ->select('devices.*', 'sites.name as site_name')
+                ->get();
+        } else {
+            $devices = DB::table('devices')
+                ->join('sites', 'devices.id_site', '=', 'sites.id')
+                ->where('sites.id_client', $user->client_id)
+                ->select('devices.*', 'sites.name as site_name')
+                ->get();
+        }
 
         return response()->json([
             'success' => true,
@@ -27,28 +32,29 @@ class DeviceController extends Controller
         ], 200);
     }
 
-    /**
-     * 2. إضافة جهاز جديد
-     */
+                     
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string',
-            'id_site' => 'required|integer|exists:sites,id',
+            'id_site' => 'required|integer',
         ]);
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 400);
         }
 
-        // تأكد أن الـ site اللي اختار الكليان تابع ليه نيت ماشي ديال شي حد آخر
-        $siteOwnedByClient = DB::table('sites')
-            ->where('id', $request->id_site)
-            ->where('id_client', auth()->user::client_id)
-            ->exists();
+        $user = $request->user();
 
-        if (!$siteOwnedByClient) {
-            return response()->json(['message' => 'Unauthorized site'], 403);
+        if (strtolower($user->role) !== 'superadmin') {
+            $siteOwnedByClient = DB::table('sites')
+                ->where('id', $request->id_site)
+                ->where('id_client', $user->client_id)
+                ->exists();
+
+            if (!$siteOwnedByClient) {
+                return response()->json(['message' => 'Unauthorized site'], 403);
+            }
         }
 
         $deviceId = DB::table('devices')->insertGetId([
@@ -63,19 +69,25 @@ class DeviceController extends Controller
         ], 201);
     }
 
-    /**
-     * 3. عرض معلومات جهاز واحد محدد
-     */
-    public function show($id)
+   
+    public function show(Request $request, $id)
     {
-        $clientId = auth()->user::client_id;
+        $user = $request->user();
 
-        $device = DB::table('devices')
-            ->join('sites', 'devices.id_site', '=', 'sites.id')
-            ->where('sites.id_client', $clientId)
-            ->where('devices.id', $id)
-            ->select('devices.*', 'sites.name as site_name')
-            ->first();
+        if (strtolower($user->role) === 'superadmin') {
+            $device = DB::table('devices')
+                ->join('sites', 'devices.id_site', '=', 'sites.id')
+                ->where('devices.id', $id)
+                ->select('devices.*', 'sites.name as site_name')
+                ->first();
+        } else {
+            $device = DB::table('devices')
+                ->join('sites', 'devices.id_site', '=', 'sites.id')
+                ->where('sites.id_client', $user->client_id)
+                ->where('devices.id', $id)
+                ->select('devices.*', 'sites.name as site_name')
+                ->first();
+        }
 
         if (!$device) {
             return response()->json(['message' => 'Device not found or unauthorized'], 404);
@@ -84,19 +96,21 @@ class DeviceController extends Controller
         return response()->json($device, 200);
     }
 
-    /**
-     * 4. تعديل جهاز
-     */
+
     public function update(Request $request, $id)
     {
-        $clientId = auth()->user::client_id;
+        $user = $request->user();
 
-        // التحقق من الملكية قبل التعديل
-        $device = DB::table('devices')
-            ->join('sites', 'devices.id_site', '=', 'sites.id')
-            ->where('sites.id_client', $clientId)
-            ->where('devices.id', $id)
-            ->first();
+        if (strtolower($user->role) === 'superadmin') {
+            $device = DB::table('devices')->where('id', $id)->first();
+        } else {
+            $device = DB::table('devices')
+                ->join('sites', 'devices.id_site', '=', 'sites.id')
+                ->where('sites.id_client', $user->client_id)
+                ->where('devices.id', $id)
+                ->select('devices.*')
+                ->first();
+        }
 
         if (!$device) {
             return response()->json(['message' => 'Device not found or unauthorized'], 404);
@@ -110,22 +124,21 @@ class DeviceController extends Controller
         return response()->json(['message' => 'Device updated successfully'], 200);
     }
 
-    /**
-     * 5. حذف جهاز
-     */
-    public function destroy($id)
+    
+    public function destroy(Request $request, $id)
     {
-        $clientId = auth()->user::client_id;
+        $user = $request->user();
 
-        // التحقق من الملكية قبل الحذف
-        $exists = DB::table('devices')
-            ->join('sites', 'devices.id_site', '=', 'sites.id')
-            ->where('sites.id_client', $clientId)
-            ->where('devices.id', $id)
-            ->exists();
+        if (strtolower($user->role) !== 'superadmin') {
+            $exists = DB::table('devices')
+                ->join('sites', 'devices.id_site', '=', 'sites.id')
+                ->where('sites.id_client', $user->client_id)
+                ->where('devices.id', $id)
+                ->exists();
 
-        if (!$exists) {
-            return response()->json(['message' => 'Unauthorized action'], 403);
+            if (!$exists) {
+                return response()->json(['message' => 'Unauthorized action'], 403);
+            }
         }
 
         DB::table('devices')->where('id', $id)->delete();
@@ -133,20 +146,24 @@ class DeviceController extends Controller
         return response()->json(['message' => 'Device deleted successfully'], 200);
     }
 
-    /**
-     * 6. الـ Function اللي طلبتي قبل: جلب الـ equipments ديال كليان معين
-     * تقدري تزيديها هنا أو فـ EquipmentController
-     */
-    public function getEquipments()
+  
+    public function getEquipments(Request $request)
     {
-        $clientId = auth()->user::client_id;
+        $user = $request->user();
 
-        $equipments = DB::table('equipments')
-            ->join('devices', 'equipments.id_device', '=', 'devices.id')
-            ->join('sites', 'devices.id_site', '=', 'sites.id')
-            ->where('sites.id_client', $clientId)
-            ->select('equipments.*', 'devices.name as device_name')
-            ->get();
+        if (strtolower($user->role) === 'superadmin') {
+            $equipments = DB::table('equipement')
+                ->join('devices', 'equipement.id_device', '=', 'devices.id')
+                ->select('equipement.*', 'devices.name as device_name')
+                ->get();
+        } else {
+            $equipments = DB::table('equipement')
+                ->join('devices', 'equipement.id_device', '=', 'devices.id')
+                ->join('sites', 'devices.id_site', '=', 'sites.id')
+                ->where('sites.id_client', $user->client_id)
+                ->select('equipement.*', 'devices.name as device_name')
+                ->get();
+        }
 
         return response()->json($equipments, 200);
     }
