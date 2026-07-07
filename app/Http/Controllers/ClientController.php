@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ClientController extends Controller
 {
-
+    /*
+    |--------------------------------------------------------------------------
+    | LISTE DES CLIENTS
+    |--------------------------------------------------------------------------
+    */
     public function index()
     {
         $clients = DB::table('clients')->get();
@@ -20,23 +23,25 @@ class ClientController extends Controller
     }
 
     /*
-    | CREATE CLIENT*/
-
+    |--------------------------------------------------------------------------
+    | AJOUTER UN CLIENT
+    |--------------------------------------------------------------------------
+    */
     public function store(Request $request)
     {
-
         $request->validate([
             'name' => 'required',
             'address' => 'nullable',
             'email' => 'nullable|email',
-            'phone' => 'nullable'
+            'tele' => 'nullable',
+            'id_user' => 'nullable'
         ]);
 
         $id = DB::table('clients')->insertGetId([
             'name' => $request->name,
             'address' => $request->address,
             'email' => $request->email,
-            'tele' => $request->phone ?? $request->tele,
+            'tele' => $request->tele,
             'id_user' => $request->id_user
         ]);
 
@@ -48,18 +53,17 @@ class ClientController extends Controller
     }
 
     /*
-    | SHOW ONE CLIENT
+    |--------------------------------------------------------------------------
+    | AFFICHER UN CLIENT
+    |--------------------------------------------------------------------------
     */
-
-    public function show(string $id)
+    public function show($id)
     {
-
         $client = DB::table('clients')
             ->where('id', $id)
             ->first();
 
         if (!$client) {
-
             return response()->json([
                 'success' => false,
                 'message' => 'Client not found'
@@ -72,17 +76,18 @@ class ClientController extends Controller
         ]);
     }
 
-    /*UPDATE CLIENT*/
-
-    public function update(Request $request, string $id)
+    /*
+    |--------------------------------------------------------------------------
+    | MODIFIER UN CLIENT
+    |--------------------------------------------------------------------------
+    */
+    public function update(Request $request, $id)
     {
-
         $client = DB::table('clients')
             ->where('id', $id)
             ->first();
 
         if (!$client) {
-
             return response()->json([
                 'success' => false,
                 'message' => 'Client not found'
@@ -95,7 +100,7 @@ class ClientController extends Controller
                 'name' => $request->name,
                 'address' => $request->address,
                 'email' => $request->email,
-                'tele' => $request->phone ?? $request->tele,
+                'tele' => $request->tele,
                 'id_user' => $request->id_user
             ]);
 
@@ -105,17 +110,18 @@ class ClientController extends Controller
         ]);
     }
 
-    /*DELETE CLIENT */
-
-    public function destroy(string $id)
+    /*
+    |--------------------------------------------------------------------------
+    | SUPPRIMER UN CLIENT
+    |--------------------------------------------------------------------------
+    */
+    public function destroy($id)
     {
-
         $client = DB::table('clients')
             ->where('id', $id)
             ->first();
 
         if (!$client) {
-
             return response()->json([
                 'success' => false,
                 'message' => 'Client not found'
@@ -132,4 +138,32 @@ class ClientController extends Controller
         ]);
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | RECUPERER LES SITES D'UN CLIENT
+    |--------------------------------------------------------------------------
+    */
+    public function sites($id)
+    {
+        $client = DB::table('clients')
+            ->where('id', $id)
+            ->first();
+
+        if (!$client) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Client not found'
+            ], 404);
+        }
+
+        $sites = DB::table('sites')
+            ->where('id_client', $id)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'client' => $client,
+            'sites' => $sites
+        ]);
+    }
 }

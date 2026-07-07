@@ -10,8 +10,7 @@ use Illuminate\Support\Facades\Validator;
 class EquipmentController extends Controller
 {
     /**
-     * GET /api/sites
-     * هاد الـ function كترجع ليك الـ equipments ديال الكليان اللي مكونيكطي
+     *
      */
     public function index(Request $request)
     {
@@ -31,44 +30,39 @@ class EquipmentController extends Controller
     }
 
     /**
-     * POST /api/sites
-     * إضافة Site جديد
+     *
      */
-    public function store(Request $request)
-    {
-        // التحقق من البيانات (Validation)
-        $validator = Validator::make($request->all(), [
-            'name'      => 'required|string',
-            'adress'    => 'required|string',
-            'city'      => 'required|string',
-            'id_client' => 'required|integer', // استعملت id_client كيفما عندك فالتصويرة
-        ]);
 
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 400);
-        }
+public function store(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'name' => 'required|string|max:255',
+        'id_device' => 'required|integer'
+    ]);
 
-        // إدخال البيانات للداتابيز
-        $id = DB::table('sites')->insertGetId([
-            'name'      => $request->name,
-            'adress'    => $request->adress,
-            'city'      => $request->city,
-            'id_client' => $request->id_client,
-        ]);
-
-        // جلب السطر اللي تزاد باش نرجعوه فـ JSON
-        $site = DB::table('sites')->where('id', $id)->first();
-
+    if ($validator->fails()) {
         return response()->json([
-            'success' => true,
-            'message' => 'Site created successfully',
-            'data'    => $site
-        ], 201);
+            'success' => false,
+            'errors' => $validator->errors()
+        ], 422);
     }
 
+    $id = DB::table('equipments')->insertGetId([
+        'name' => $request->name,
+        'id_device' => $request->id_device,
+    ]);
+
+    $equipment = DB::table('equipments')
+        ->where('id', $id)
+        ->first();
+
+    return response()->json([
+        'success' => true,
+        'data' => $equipment
+    ], 201);
+}
     /**
-     * GET /api/sites/{id}
-     * عرض معلومات Site واحد
+     
      */
     public function show($id)
     {
@@ -82,8 +76,7 @@ class EquipmentController extends Controller
     }
 
     /**
-     * PUT /api/sites/{id}
-     * تعديل Site
+     
      */
     public function update(Request $request, $id)
     {
@@ -104,7 +97,7 @@ class EquipmentController extends Controller
 
     /**
      * DELETE /api/sites/{id}
-     * حذف Site
+     * 
      */
     public function destroy($id)
     {

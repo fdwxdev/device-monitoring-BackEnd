@@ -4,8 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;   // 
+use Illuminate\Support\Facades\Hash; //  
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -17,22 +18,27 @@ class AuthController extends Controller
             'password' => 'required'
         ]);
 
-        // Query directly with DB::table
         $user = DB::table('users')->where('email', $request->email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (!$user) {
             return response()->json([
-                'message' => 'Email or password incorrect'
+                'status' => 'error',
+                'message' => 'Email non trouvé dans la base de données: ' . $request->email
             ], 401);
         }
 
-        // Retrieve or generate a stable remember_token as the API token
-        $token = $user->remember_token;
-        if (!$token) {
-            $token = bin2hex(random_bytes(32));
-            DB::table('users')->where('id', $user->id)->update(['remember_token' => $token]);
-            $user->remember_token = $token;
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Mot de passe incorrect pour cet utilisateur',
+                'debug_received_password' => $request->password,
+                'debug_hash_in_db' => $user->password
+            ], 401);
         }
+
+        $token = $user->remember_token ?: bin2hex(random_bytes(32));
+
+        DB::table('users')->where('id', $user->id)->update(['remember_token' => $token]);
 
         return response()->json([
             'message' => 'Login success',
