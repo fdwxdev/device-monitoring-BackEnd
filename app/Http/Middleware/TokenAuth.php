@@ -18,20 +18,17 @@ class TokenAuth
 
         $token = substr($header, 7);
 
-        $user = DB::table('users')->where('remember_token', $token)->first();
+        $user = DB::table('users')
+            ->where('remember_token', $token)
+            ->first();
 
         if (!$user) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        // Récupérer le client_id depuis la table clients
-        $clientId = DB::table('clients')->where('id_user', $user->id)->value('id');
-        $user->client_id = $clientId;
+        // $user->client_id = $user->id_client;
 
-        // Enregistrer l'utilisateur dans le résolveur de requête Laravel pour pouvoir utiliser $request->user()
-        $request->setUserResolver(function () use ($user) {
-            return $user;
-        });
+        $request->setUserResolver(fn () => $user);
 
         return $next($request);
     }

@@ -17,13 +17,13 @@ class UserController extends Controller
 
         if (strtolower($user->role) === 'superadmin') {
             $utilisateurs = DB::table('users')
-                ->select('id', 'name', 'name as username', 'email', 'role', 'account_id', 'created_at', 'updated_at')
+                ->select('id', 'name', 'name as username', 'email', 'role', 'client_id as account_id', 'created_at', 'updated_at')
                 ->get();
         } else {
             // Admin Client can see just his users account 
             $utilisateurs = DB::table('users')
-                ->select('id', 'name', 'name as username', 'email', 'role', 'account_id', 'created_at', 'updated_at')
-                ->where('account_id', $user->account_id)
+                ->select('id', 'name', 'name as username', 'email', 'role', 'client_id as account_id', 'created_at', 'updated_at')
+                ->where('client_id', $user->client_id)
                 ->get();
         }
 
@@ -44,16 +44,16 @@ class UserController extends Controller
         ]);
 
     
-        $accountId = (strtolower($admin->role) === 'superadmin') 
+        $clientId = (strtolower($admin->role) === 'superadmin') 
                         ? $request->account_id 
-                        : $admin->account_id;
+                        : $admin->client_id;
 
         DB::table('users')->insert([
             'name' => $request->username,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $request->role,
-            'account_id' => $accountId,
+            'client_id' => $clientId,
             'created_at' => now(),
             'updated_at' => now(),
         ]);

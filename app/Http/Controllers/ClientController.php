@@ -7,11 +7,7 @@ use Illuminate\Support\Facades\DB;
 
 class ClientController extends Controller
 {
-    /*
-    |--------------------------------------------------------------------------
-    | LISTE DES CLIENTS
-    |--------------------------------------------------------------------------
-    */
+  
     public function index()
     {
         $clients = DB::table('clients')->get();
@@ -22,27 +18,21 @@ class ClientController extends Controller
         ]);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | AJOUTER UN CLIENT
-    |--------------------------------------------------------------------------
-    */
+    
     public function store(Request $request)
     {
         $request->validate([
             'name' => 'required',
             'address' => 'nullable',
             'email' => 'nullable|email',
-            'tele' => 'nullable',
-            'id_user' => 'nullable'
+            'tele' => 'nullable'
         ]);
 
         $id = DB::table('clients')->insertGetId([
             'name' => $request->name,
             'address' => $request->address,
             'email' => $request->email,
-            'tele' => $request->tele,
-            'id_user' => $request->id_user
+            'tele' => $request->tele
         ]);
 
         return response()->json([
@@ -52,11 +42,7 @@ class ClientController extends Controller
         ], 201);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | AFFICHER UN CLIENT
-    |--------------------------------------------------------------------------
-    */
+
     public function show($id)
     {
         $client = DB::table('clients')
@@ -76,11 +62,7 @@ class ClientController extends Controller
         ]);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | MODIFIER UN CLIENT
-    |--------------------------------------------------------------------------
-    */
+  
     public function update(Request $request, $id)
     {
         $client = DB::table('clients')
@@ -100,8 +82,7 @@ class ClientController extends Controller
                 'name' => $request->name,
                 'address' => $request->address,
                 'email' => $request->email,
-                'tele' => $request->tele,
-                'id_user' => $request->id_user
+                'tele' => $request->tele
             ]);
 
         return response()->json([
@@ -110,11 +91,6 @@ class ClientController extends Controller
         ]);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | SUPPRIMER UN CLIENT
-    |--------------------------------------------------------------------------
-    */
     public function destroy($id)
     {
         $client = DB::table('clients')
@@ -138,11 +114,6 @@ class ClientController extends Controller
         ]);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | RECUPERER LES SITES D'UN CLIENT
-    |--------------------------------------------------------------------------
-    */
     public function sites($id)
     {
         $client = DB::table('clients')
@@ -163,7 +134,8 @@ class ClientController extends Controller
         return response()->json([
             'success' => true,
             'client' => $client,
-            'sites' => $sites
+            'sites' => $sites,
+            'data' => $sites
         ]);
     }
 }

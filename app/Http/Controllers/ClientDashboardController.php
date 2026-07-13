@@ -250,7 +250,7 @@ class ClientDashboardController extends Controller
         ]);
 
         // Mettre à jour la table clients correspondante
-        DB::table('clients')->where('id_user', $user->id)->update([
+        DB::table('clients')->where('id', $user->client_id)->update([
             'name' => $request->name,
             'email' => $request->email,
             'address' => $request->address,
@@ -259,7 +259,7 @@ class ClientDashboardController extends Controller
 
         // Re-charger l'utilisateur mis à jour
         $updatedUser = DB::table('users')->where('id', $user->id)->first();
-        $clientDetails = DB::table('clients')->where('id_user', $user->id)->first();
+        $clientDetails = DB::table('clients')->where('id', $user->client_id)->first();
         $updatedUser->client_details = $clientDetails;
 
         return response()->json([
