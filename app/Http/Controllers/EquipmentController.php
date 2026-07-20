@@ -9,18 +9,16 @@ use Illuminate\Support\Facades\Validator;
 
 class EquipmentController extends Controller
 {
-    /**
-     *
-     */
+    
     public function index(Request $request)
     {
         $clientId = $request->user()->client_id;
 
-        $equipments = DB::table('equipments')
-            ->join('devices', 'equipments.id_device', '=', 'devices.id')
+        $equipments = DB::table('equipement')
+            ->join('devices', 'equipement.id_device', '=', 'devices.id')
             ->join('sites', 'devices.id_site', '=', 'sites.id')
             ->where('sites.id_client', $clientId)
-            ->select('equipments.*', 'devices.name as device_name', 'sites.name as site_name')
+            ->select('equipement.*', 'devices.name as device_name', 'sites.name as site_name')
             ->get();
 
         return response()->json([
@@ -29,9 +27,7 @@ class EquipmentController extends Controller
         ], 200);
     }
 
-    /**
-     *
-     */
+  
 
 public function store(Request $request)
 {
@@ -47,12 +43,12 @@ public function store(Request $request)
         ], 422);
     }
 
-    $id = DB::table('equipments')->insertGetId([
+    $id = DB::table('equipement')->insertGetId([
         'name' => $request->name,
         'id_device' => $request->id_device,
     ]);
 
-    $equipment = DB::table('equipments')
+    $equipment = DB::table('equipement')
         ->where('id', $id)
         ->first();
 
@@ -61,55 +57,58 @@ public function store(Request $request)
         'data' => $equipment
     ], 201);
 }
-    /**
-     
-     */
+    
     public function show($id)
     {
-        $site = DB::table('sites')->where('id', $id)->first();
+        $equipment = DB::table('equipement')->where('id', $id)->first();
 
-        if (!$site) {
-            return response()->json(['message' => 'Site not found'], 404);
+        if (!$equipment) {
+            return response()->json(['message' => 'Equipment not found'], 404);
         }
 
-        return response()->json($site, 200);
+        return response()->json($equipment, 200);
     }
 
-    /**
-     
-     */
+    
     public function update(Request $request, $id)
     {
-        $updated = DB::table('sites')->where('id', $id)->update([
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'id_device' => 'required|integer'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $updated = DB::table('equipement')->where('id', $id)->update([
             'name'      => $request->name,
-            'adress'    => $request->adress,
-            'city'      => $request->city,
-            'id_client' => $request->id_client,
+            'id_device' => $request->id_device,
         ]);
 
         if (!$updated) {
-            return response()->json(['message' => 'Site not found or no changes made'], 404);
+            return response()->json(['message' => 'Equipment not found or no changes made'], 404);
         }
 
-        $site = DB::table('sites')->where('id', $id)->first();
-        return response()->json($site, 200);
+        $equipment = DB::table('equipement')->where('id', $id)->first();
+        return response()->json($equipment, 200);
     }
 
-    /**
-     * DELETE /api/sites/{id}
-     * 
-     */
+ 
     public function destroy($id)
     {
-        $deleted = DB::table('sites')->where('id', $id)->delete();
+        $deleted = DB::table('equipement')->where('id', $id)->delete();
 
         if (!$deleted) {
-            return response()->json(['message' => 'Site not found'], 404);
+            return response()->json(['message' => 'Equipment not found'], 404);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Site deleted successfully'
+            'message' => 'Equipment deleted successfully'
         ], 200);
     }
 }

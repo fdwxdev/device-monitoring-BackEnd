@@ -14,11 +14,11 @@ class SiteController extends Controller
     {
         $user = $request->user();
 
-        if (strtolower($user->role) === 'superadmin') {
-            $sitesQuery = DB::table('sites');
-        } else {
+         if (strtolower($user->role) === 'superadmin') {
+             $sitesQuery = DB::table('sites');
+         } else {
             $sitesQuery = DB::table('sites')->where('id_client', $user->client_id);
-        }
+         }
 
         $sites = $sitesQuery->get()->map(function ($site) {
             $devicesCount = DB::table('devices')->where('id_site', $site->id)->count();
@@ -96,6 +96,8 @@ class SiteController extends Controller
             'adress'    => 'required|string',
             'city'      => 'required|string',
             'id_client' => 'required|integer',
+            'latitude'  => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'image'     => 'nullable|image|mimes:jpeg,png,jpg|max:2048',  
         ]);
 
@@ -105,7 +107,6 @@ class SiteController extends Controller
 
         $imagePath = null;
         if ($request->hasFile('image')) {
-            //   save pic in  storage/app/public/sites
             $imagePath = $request->file('image')->store('sites', 'public');
         }
 
@@ -113,8 +114,10 @@ class SiteController extends Controller
             'name'      => $request->name,
             'adress'    => $request->adress,
             'city'      => $request->city,
+            'latitude'  => $request->latitude,
+            'longitude' => $request->longitude,
             'id_client' => $request->id_client,
-            'image'     => $imagePath, //   ( sites/xyz.jpg) save chemin-------
+            'image'     => $imagePath,
         ]);
 
         $site = DB::table('sites')->where('id', $id)->first();
@@ -136,6 +139,8 @@ class SiteController extends Controller
             'adress'    => $request->adress ?? $site->adress,
             'city'      => $request->city ?? $site->city,
             'id_client' => $request->id_client ?? $site->id_client,
+            'latitude'  => $request->latitude ?? $site->latitude,
+            'longitude' => $request->longitude ?? $site->longitude,
         ];
 
         if ($request->hasFile('image')) {

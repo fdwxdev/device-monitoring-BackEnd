@@ -10,7 +10,14 @@ class ClientController extends Controller
   
     public function index()
     {
-        $clients = DB::table('clients')->get();
+        $clients = DB::table('clients')
+            ->select(
+                'clients.*',
+                DB::raw('(SELECT COUNT(*) FROM sites WHERE sites.id_client = clients.id) as sites_count'),
+                DB::raw('(SELECT COUNT(*) FROM users WHERE users.client_id = clients.id) as users_count'),
+                DB::raw('(SELECT COUNT(*) FROM devices WHERE devices.id_site IN (SELECT sites.id FROM sites WHERE sites.id_client = clients.id)) as devices_count')
+            )
+            ->get();
 
         return response()->json([
             'success' => true,

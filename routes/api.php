@@ -20,17 +20,15 @@ Route::middleware('token.auth')->group(function () {
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // ---------------------------------------------------------
     // SHARED ROUTES (SUPER ADMIN & ADMIN CLIENT)
-    // ---------------------------------------------------------
     Route::middleware('role:superAdmin,adminClient')->group(function () {
         Route::apiResource('utilisateurs', UserController::class);
     });
 
-    // ---------------------------------------------------------
     // SUPER ADMIN ROUTES
-    // ---------------------------------------------------------
     Route::middleware('role:superAdmin')->group(function () {
+        Route::get('/admin/dashboard-stats', [SuperAdminDashboardController::class, 'getStats']);
+
         Route::apiResource('sites', SiteController::class);
         Route::apiResource('sensors', SensorController::class);
         Route::apiResource('equipments', EquipmentController::class);
@@ -42,14 +40,14 @@ Route::middleware('token.auth')->group(function () {
         Route::get('/sensor-data/stats', [SensorDataController::class, 'stats']);
         Route::get('/alerts', [SensorDataController::class, 'getAlerts']);
         Route::get('/sensors/{id}/data', [SensorDataController::class, 'getBySensor']);
+        Route::get('/notifications', [ClientDashboardController::class, 'getNotifications']);
     });
 
 
-    // ---------------------------------------------------------
-    // CLIENT ADMIN ROUTES
-    // ---------------------------------------------------------
-    Route::middleware('role:adminClient,client')->group(function () {
+    
+    Route::middleware('role:adminClient,client,user')->group(function () {
         Route::get('/client/sites', [SiteController::class, 'index']);
+        Route::get('/client/sites/{id}', [SiteController::class, 'show']);
         Route::get('/client/sensors', [SensorController::class, 'clientSensors']);
         Route::put('/sensors/{id}/thresholds', [SensorController::class, 'updateThresholds']);
 
@@ -60,6 +58,8 @@ Route::middleware('token.auth')->group(function () {
         Route::get('/client/alarms', [ClientDashboardController::class, 'getAlarms']);
         Route::put('/client/profile', [ClientDashboardController::class, 'updateProfile']);
         Route::put('/client/profile/password', [ClientDashboardController::class, 'updatePassword']);
+        Route::get('/client/alerts', [SensorDataController::class, 'getAlerts']);
+        Route::get('/client/notifications', [ClientDashboardController::class, 'getNotifications']);
     });
 
     // VIEWER ROUTES

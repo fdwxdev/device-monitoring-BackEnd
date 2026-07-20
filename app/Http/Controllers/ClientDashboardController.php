@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Validator;
 
 class ClientDashboardController extends Controller
 {
-    // 1. STATS DU DASHBOARD
     public function getStats(Request $request)
     {
         $clientId = $request->user()->client_id;
@@ -18,7 +17,8 @@ class ClientDashboardController extends Controller
             return response()->json(['message' => 'Aucun client associé à cet utilisateur'], 404);
         }
 
-        // Nombre de devices du client
+        $sitesCount = DB::table('sites')->where('id_client', $clientId)->count();
+
         $devices = DB::table('devices')
             ->join('sites', 'devices.id_site', '=', 'sites.id')
             ->where('sites.id_client', $clientId)
@@ -29,32 +29,35 @@ class ClientDashboardController extends Controller
         $active = $devices->where('status', 'Online')->count();
         $inactive = $total - $active;
 
-        // Nombre total d'alertes liées aux capteurs du client
-        // On récupère le nombre d'alertes récentes simulées ou réelles à partir des mesures de capteurs hors-limites
         $deviceIds = $devices->pluck('id');
         
-        // Simuler ou récupérer les alertes réelles
-        // Par exemple, les valeurs de sensor_data qui dépassent les seuils (si applicable)
-        // Pour l'instant, on fournit un nombre d'alertes cohérent
         $alarmsCount = DB::table('sensor_data')
             ->join('sensors', 'sensor_data.id_sensor', '=', 'sensors.id')
             ->join('equipement', 'sensors.id_equipement', '=', 'equipement.id')
             ->whereIn('equipement.id_device', $deviceIds)
-            ->whereRaw('CAST(sensor_data.value AS DECIMAL(10,2)) > 40') // Exemple de valeur d'alerte (Temp > 40)
+            ->whereRaw('CAST(sensor_data.value AS DECIMAL(10,2)) > 40') 
+            ->count();
+
+        $sensorsCount = DB::table('sensors')
+            ->join('equipement', 'sensors.id_equipement', '=', 'equipement.id')
+            ->join('devices', 'equipement.id_device', '=', 'devices.id')
+            ->join('sites', 'devices.id_site', '=', 'sites.id')
+            ->where('sites.id_client', $clientId)
             ->count();
 
         return response()->json([
             'success' => true,
             'stats' => [
+                'sites_count' => $sitesCount,
                 'total_devices' => $total,
                 'active_devices' => $active,
                 'inactive_devices' => $inactive,
-                'alarms_count' => $alarmsCount ?: 2, // fallback à 2 si vide pour démo
+                'alarms_count' => $alarmsCount ?: 2,
+                'sensors_count' => $sensorsCount,
             ]
         ]);
     }
 
-    // 2. LISTE DES DEVICES
     public function getDevices(Request $request)
     {
         $clientId = $request->user()->client_id;
@@ -69,7 +72,6 @@ class ClientDashboardController extends Controller
             ->select('devices.*', 'sites.name as site_name')
             ->get();
 
-        // Mettre un statut par défaut si vide
         $devices = $devices->map(function ($device) {
             $device->status = $device->status ?? 'Online';
             return $device;
@@ -81,7 +83,6 @@ class ClientDashboardController extends Controller
         ]);
     }
 
-    // 3. DÉTAILS D'UN DEVICE
     public function getDeviceDetails(Request $request, $id)
     {
         $clientId = $request->user()->client_id;
@@ -99,12 +100,10 @@ class ClientDashboardController extends Controller
 
         $device->status = $device->status ?? 'Online';
 
-        // Équipements reliés à l'appareil
         $equipments = DB::table('equipement')
             ->where('id_device', $id)
             ->get();
 
-        // Récupérer les capteurs pour ces équipements
         $equipmentIds = $equipments->pluck('id');
         $sensors = [];
         if ($equipmentIds->isNotEmpty()) {
@@ -121,7 +120,6 @@ class ClientDashboardController extends Controller
         ]);
     }
 
-    // 4. HISTORIQUE DES MESURES
     public function getDeviceHistory(Request $request, $id)
     {
         $clientId = $request->user()->client_id;
@@ -136,7 +134,6 @@ class ClientDashboardController extends Controller
             return response()->json(['message' => 'Accès non autorisé'], 403);
         }
 
-        // Récupérer les 20 dernières mesures de la table sensor_data pour les capteurs de ce device
         $history = DB::table('sensor_data')
             ->join('sensors', 'sensor_data.id_sensor', '=', 'sensors.id')
             ->join('equipement', 'sensors.id_equipement', '=', 'equipement.id')
@@ -152,7 +149,6 @@ class ClientDashboardController extends Controller
         ]);
     }
 
-    // 5. ALERTES
     public function getAlarms(Request $request)
     {
         $clientId = $request->user()->client_id;
@@ -161,8 +157,6 @@ class ClientDashboardController extends Controller
             return response()->json(['success' => true, 'data' => []]);
         }
 
-        // Récupérer les alertes basées sur les dépassements de seuils dans sensor_data
-        // Ou générer une liste d'alertes cohérente avec les appareils du client
         $devices = DB::table('devices')
             ->join('sites', 'devices.id_site', '=', 'sites.id')
             ->where('sites.id_client', $clientId)
@@ -198,7 +192,6 @@ class ClientDashboardController extends Controller
                 ];
             });
 
-        // S'il n'y a pas d'alertes réelles dans la base, on en simule quelques-unes pour le rendu visuel
         if ($alarms->isEmpty() && $devices->isNotEmpty()) {
             $firstDeviceName = $devices->first()->name;
             $alarms = collect([
@@ -225,9 +218,64 @@ class ClientDashboardController extends Controller
             'success' => true,
             'data' => $alarms
         ]);
+    }    public function getNotifications(Request $request)
+    {
+        $user = $request->user();
+        $clientId = $user->client_id ?? null;
+
+        if (!$clientId && strtolower($user->role) !== 'superadmin') {
+            return response()->json(['success' => true, 'data' => [], 'unread_count' => 0]);
+        }
+
+        $query = DB::table('sensor_data')
+            ->join('sensors', 'sensor_data.id_sensor', '=', 'sensors.id')
+            ->join('equipement', 'sensors.id_equipement', '=', 'equipement.id')
+            ->join('devices', 'equipement.id_device', '=', 'devices.id')
+            ->join('sites', 'devices.id_site', '=', 'sites.id')
+            ->whereRaw('CAST(sensor_data.value AS DECIMAL(10,2)) > 40');
+
+        if (strtolower($request->user()->role) !== 'superadmin') {
+            $query->where('sites.id_client', $clientId);
+        }
+
+        $notifications = $query
+            ->select(
+                'sensor_data.id',
+                'sensor_data.value',
+                'sensor_data.reception_datetime',
+                'sensors.name as sensor_name',
+                'devices.name as device_name',
+                'sites.name as site_name'
+            )
+            ->orderBy('sensor_data.reception_datetime', 'desc')
+            ->limit(20)
+            ->get()
+            ->map(function ($item) {
+                $value = floatval($item->value);
+                $severity = 'info';
+                if ($value > 80) $severity = 'critical';
+                elseif ($value > 60) $severity = 'warning';
+
+                return [
+                    'id' => $item->id,
+                    'message' => "Seuil dépassé sur {$item->sensor_name}: {$value}°C ({$item->device_name} - {$item->site_name})",
+                    'severity' => $severity,
+                    'sensor_name' => $item->sensor_name,
+                    'device_name' => $item->device_name,
+                    'site_name' => $item->site_name,
+                    'value' => $value,
+                    'time' => $item->reception_datetime ? date('d/m/Y H:i', strtotime($item->reception_datetime)) : 'Récemment',
+                    'read' => false,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $notifications,
+            'unread_count' => $notifications->count()
+        ]);
     }
 
-    // 6. MISE À JOUR DU PROFIL
     public function updateProfile(Request $request)
     {
         $user = $request->user();
@@ -243,13 +291,11 @@ class ClientDashboardController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Mettre à jour la table users
         DB::table('users')->where('id', $user->id)->update([
             'name' => $request->name,
             'email' => $request->email,
         ]);
 
-        // Mettre à jour la table clients correspondante
         DB::table('clients')->where('id', $user->client_id)->update([
             'name' => $request->name,
             'email' => $request->email,
@@ -257,7 +303,6 @@ class ClientDashboardController extends Controller
             'tele' => $request->tele,
         ]);
 
-        // Re-charger l'utilisateur mis à jour
         $updatedUser = DB::table('users')->where('id', $user->id)->first();
         $clientDetails = DB::table('clients')->where('id', $user->client_id)->first();
         $updatedUser->client_details = $clientDetails;
@@ -269,7 +314,6 @@ class ClientDashboardController extends Controller
         ]);
     }
 
-    // 7. MISE À JOUR DU MOT DE PASSE
     public function updatePassword(Request $request)
     {
         $user = $request->user();
@@ -283,12 +327,10 @@ class ClientDashboardController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Vérifier l'ancien mot de passe
         if (!Hash::check($request->current_password, $user->password)) {
             return response()->json(['errors' => ['current_password' => ['Le mot de passe actuel est incorrect.']]], 422);
         }
 
-        // Mettre à jour le mot de passe dans la base de données
         DB::table('users')->where('id', $user->id)->update([
             'password' => Hash::make($request->new_password)
         ]);

@@ -10,7 +10,6 @@ class SuperAdminDashboardController extends Controller
     public function getStats()
     {
         try {
-    // Query Builder
             $clientsCount = DB::table('clients')->count();
             $sitesCount = DB::table('sites')->count();
             
@@ -36,6 +35,13 @@ class SuperAdminDashboardController extends Controller
                 ['name' => '20:00', 'temp' => 23],
             ];
 
+            $sitesPerClient = DB::table('clients')
+                ->leftJoin('sites', 'sites.id_client', '=', 'clients.id')
+                ->select('clients.name', DB::raw('COUNT(sites.id) as sites_count'))
+                ->groupBy('clients.id', 'clients.name')
+                ->orderByDesc('sites_count')
+                ->get();
+
             return response()->json([
                 'success' => true,
                 'clients_count' => $clientsCount,
@@ -44,7 +50,9 @@ class SuperAdminDashboardController extends Controller
                 'offline_count' => $offlineCount,
                 'active_alerts_count' => $activeAlertsCount, 
                 'connection_rate' => $connectionRate,
-                'thermal_history' => $thermalHistory
+                'thermal_history' => $thermalHistory,
+                'sites_per_client' => $sitesPerClient,
+                
             ]);
             
         } catch (\Exception $e) {

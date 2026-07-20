@@ -26,7 +26,7 @@ class TokenAuth
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        // $user->client_id = $user->id_client;
+        // client_id is already in the users table directly
 
         $request->setUserResolver(fn () => $user);
 
