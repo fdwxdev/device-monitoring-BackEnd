@@ -56,6 +56,7 @@ Route::middleware('token.auth')->group(function () {
         Route::get('/client/devices/{id}', [ClientDashboardController::class, 'getDeviceDetails']);
         Route::get('/client/devices/{id}/history', [ClientDashboardController::class, 'getDeviceHistory']);
         Route::get('/client/alarms', [ClientDashboardController::class, 'getAlarms']);
+        Route::get('/client/profile', [ClientDashboardController::class, 'getProfile']);
         Route::put('/client/profile', [ClientDashboardController::class, 'updateProfile']);
         Route::put('/client/profile/password', [ClientDashboardController::class, 'updatePassword']);
         Route::get('/client/alerts', [SensorDataController::class, 'getAlerts']);

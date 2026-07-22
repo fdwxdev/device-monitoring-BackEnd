@@ -276,6 +276,37 @@ class ClientDashboardController extends Controller
         ]);
     }
 
+    public function getProfile(Request $request)
+    {
+        $user = $request->user();
+        $clientId = $user->client_id;
+
+        $client = null;
+        $sites = [];
+
+        if ($clientId) {
+            $client = DB::table('clients')->where('id', $clientId)->first();
+            $sites = DB::table('sites')
+                ->where('id_client', $clientId)
+                ->select('id', 'name', 'address', 'city', 'image')
+                ->get();
+        }
+
+        return response()->json([
+            'success' => true,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'client_id' => $clientId,
+                'created_at' => $user->created_at,
+            ],
+            'client' => $client,
+            'sites' => $sites,
+        ]);
+    }
+
     public function updateProfile(Request $request)
     {
         $user = $request->user();

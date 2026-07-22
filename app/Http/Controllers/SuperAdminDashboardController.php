@@ -19,12 +19,17 @@ class SuperAdminDashboardController extends Controller
             $totalDevices = $onlineCount + $offlineCount;
             $connectionRate = $totalDevices > 0 ? round(($onlineCount / $totalDevices) * 100) . '%' : '0%';
 
-            $activeAlertsCount = DB::table('sensors')
-                ->whereNotNull('value')
-                ->where(function ($query) {
-                    $query->whereColumn('value', '>', 'max_threshold')
-                          ->orWhereColumn('value', '<', 'min_threshold');
-                })->count();
+            $activeAlertsCount = 0;
+            try {
+                $activeAlertsCount = DB::table('sensors')
+                    ->whereNotNull('value')
+                    ->where(function ($query) {
+                        $query->whereColumn('value', '>', 'max_threshold')
+                              ->orWhereColumn('value', '<', 'min_threshold');
+                    })->count();
+            } catch (\Exception $e) {
+                $activeAlertsCount = 0;
+            }
 
             $thermalHistory = [
                 ['name' => '00:00', 'temp' => 22],
